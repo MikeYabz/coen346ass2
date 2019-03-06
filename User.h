@@ -11,6 +11,10 @@
 class User {
 public:
     std::vector<Process>processes;
+    std::string username;
+    User(std::string inputUsername){
+        this->username = inputUsername;
+    }
 };
 
 

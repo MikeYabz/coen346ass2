@@ -4,9 +4,9 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
-  "/cygdrive/c/Users/MikeY/CLionProjects/untitled1/Process.cpp" "/cygdrive/c/Users/MikeY/CLionProjects/untitled1/cmake-build-debug/CMakeFiles/untitled1.dir/Process.cpp.o"
-  "/cygdrive/c/Users/MikeY/CLionProjects/untitled1/User.cpp" "/cygdrive/c/Users/MikeY/CLionProjects/untitled1/cmake-build-debug/CMakeFiles/untitled1.dir/User.cpp.o"
-  "/cygdrive/c/Users/MikeY/CLionProjects/untitled1/main.cpp" "/cygdrive/c/Users/MikeY/CLionProjects/untitled1/cmake-build-debug/CMakeFiles/untitled1.dir/main.cpp.o"
+  "/cygdrive/c/Users/mike.y/Documents/coen346ass2/Process.cpp" "/cygdrive/c/Users/mike.y/Documents/coen346ass2/cmake-build-debug/CMakeFiles/untitled1.dir/Process.cpp.o"
+  "/cygdrive/c/Users/mike.y/Documents/coen346ass2/User.cpp" "/cygdrive/c/Users/mike.y/Documents/coen346ass2/cmake-build-debug/CMakeFiles/untitled1.dir/User.cpp.o"
+  "/cygdrive/c/Users/mike.y/Documents/coen346ass2/main.cpp" "/cygdrive/c/Users/mike.y/Documents/coen346ass2/cmake-build-debug/CMakeFiles/untitled1.dir/main.cpp.o"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")
 
