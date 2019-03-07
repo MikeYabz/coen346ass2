@@ -110,15 +110,8 @@ int main() {
      */
     threadRun.lock();
     while(true){
-        /*
-        while(systemTime<1000){
-            systemTime++;
-        }
-         */
-        //run cycle;
         std::cout << "startTime: " << systemTime << "\n";
-        updateStatus(users,activeProcesses);
-
+        updateStatus(users,activeProcesses);    //check if new processes are ready
 
         bool noActiveProcesses = true;
         for(int i=0 ; i<users.size() ; i++) {
@@ -147,17 +140,16 @@ int main() {
                     users[i].processes[j].stopFlag = false;
                     modifyProcessMutex.unlock();
 
-                    std::unique_lock<std::mutex> locker(mu);
-
 
                     systemTimeMutex.lock();
                     processTimeStopFlag = false;
                     systemTimeMutex.unlock();
-                    std::thread processTimer(clockTimeout,1000); //setting up a scheduler timeout
+                    std::thread processTimer(clockTimeout,1000); //setting up a scheduler timeout, 1000 is temporary, need to calculate actual runtimes
 
 
                     threadRun.unlock();
                     //the master now gives up control of threadRun and waits for either a timeout from the clock ot the process to finish itself
+                    std::unique_lock<std::mutex> locker(mu);
                     cond.wait(locker);
 
                         //Signal thread to suspend itself
@@ -205,17 +197,17 @@ int main() {
     return 0;
 }
 
-enum States {idle,running};
 
+
+
+enum States {idle,running};
 void runThread(Process* process){
-    //std::unique_lock<std::mutex> locker(mu);
     bool boolStopSignalReceived = false;
     States state = idle;
     States  pastState = idle;
 
     while(true)
     {
-
 
         //************************STATE CHANGE LOGIC
         if (pastState == idle){
@@ -274,6 +266,7 @@ void updateStatus(std::vector<User> &users, std::vector<std::thread> &activeProc
     }
 }
 
+/*
 // Get time stamp in microseconds.
 uint64_t micros()
 {
@@ -281,11 +274,10 @@ uint64_t micros()
                                                                         now().time_since_epoch()).count();
     return us;
 }
-
+*/
 void clockTimeout(uint32_t timeout){
     uint32_t currentTime = systemTime;
     while(true){
-
 
         systemTimeMutex.lock();
         if((systemTime > currentTime+timeout) || (processTimeStopFlag == true)){
@@ -294,16 +286,6 @@ void clockTimeout(uint32_t timeout){
             return;
         }
         systemTimeMutex.unlock();
-
-
-        /*
-        timeoutEndFlagMutex.lock();
-        if (timeoutEndFlag == false){
-            timeoutEndFlagMutex.unlock();
-            return;
-        }
-        timeoutEndFlagMutex.unlock();
-        */
 
     }
 }
