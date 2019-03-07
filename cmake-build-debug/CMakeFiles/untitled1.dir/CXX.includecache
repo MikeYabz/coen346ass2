@@ -6,17 +6,21 @@
 
 #IncludeRegexTransform: 
 
-/cygdrive/c/Users/mike.y/Documents/coen346ass2/Process.h
+/cygdrive/c/Users/micya/Documents/coen346ass2/Process.h
 iostream
 -
+mutex
+-
 
-/cygdrive/c/Users/mike.y/Documents/coen346ass2/User.h
+/cygdrive/c/Users/micya/Documents/coen346ass2/User.h
 Process.h
-/cygdrive/c/Users/mike.y/Documents/coen346ass2/Process.h
+/cygdrive/c/Users/micya/Documents/coen346ass2/Process.h
 vector
-/cygdrive/c/Users/mike.y/Documents/coen346ass2/vector
+/cygdrive/c/Users/micya/Documents/coen346ass2/vector
 
-/cygdrive/c/Users/mike.y/Documents/coen346ass2/main.cpp
+/cygdrive/c/Users/micya/Documents/coen346ass2/main.cpp
+stdio.h
+-
 iostream
 -
 vector
@@ -28,9 +32,15 @@ fstream
 cstring
 -
 User.h
-/cygdrive/c/Users/mike.y/Documents/coen346ass2/User.h
+/cygdrive/c/Users/micya/Documents/coen346ass2/User.h
 chrono
 -
 thread
+-
+mutex
+-
+condition_variable
+-
+w32api/processthreadsapi.h
 -
 

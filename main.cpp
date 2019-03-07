@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <iostream>
 #include <vector>
 #include <string.h>
@@ -6,14 +7,26 @@
 #include "User.h"
 #include <chrono>
 #include <thread>
+#include <mutex>
+#include <condition_variable>
 #include <w32api/processthreadsapi.h>
 
+
 const bool DEBUG = true;
+long long systemTime = 0;
+std::mutex mu;
+std::condition_variable cond;
+int r;
+HANDLE C;
+
+std::mutex stop;
+bool stopFlag = false;
+std::mutex threadRun;
 
 // Get time stamp in microseconds.
 uint64_t micros();
-void updateStatus(std::vector<User>users, uint64_t startTime);
-void runThread(User &user);
+void updateStatus(std::vector<User> &users, std::vector<std::thread> &activeProcesses);
+void runThread(Process* process);
 
 int main() {
 
@@ -64,9 +77,9 @@ int main() {
         if (DEBUG) std::cout << "username: " << users[i].username <<std::endl;
         if (DEBUG) std::cout << "number of processes: " << users[i].processes.size() << "\n\n";
         for(int j=0;j<users[i].processes.size();j++) {
-            Process tempProcess = users[i].processes[j];
-            std::cout << "process:" << j << " ready time " << tempProcess.startTime << std::endl;
-            std::cout << "process:" << j << " process time " << tempProcess.duration << std::endl;
+            //Process tempProcess = users[i].processes[j];
+            std::cout << "process:" << j << " ready time " << users[i].processes[j].startTime << std::endl;
+            std::cout << "process:" << j << " process time " << users[i].processes[j].duration << std::endl;
         }
         std::cout << "-------------------------------------\n";
     }
@@ -76,39 +89,87 @@ int main() {
 
     uint64_t start = micros();
     auto quantumMicro = quantum*1000000; //convert quantum in second to milliseconds
-    std::vector<std::thread> processes;
+    unsigned long long virtualClock = 0;
+    std::vector<std::thread> activeProcesses;
 
+    /*
     for(int i=0;i<users.size();i++) {
         for (int j = 0; j < users[i].processes.size(); j++) {
-            std::thread th(runThread,users[i].processes[j]);
-            processes.push_back(std::move(th));
+            //std::thread tempTH(runThread,&users[i].processes[j]);
+            users[i].processes[j].stopFlag = true;
+            activeProcesses.push_back(std::thread(runThread,&users[i].processes[j]));
+            std::this_thread::sleep_for (std::chrono::milliseconds(2));
         }
     }
+     */
+    threadRun.lock();
     while(counterUsersFinished < userCount){
-        std::cout << "startTime: " << micros()-start << "\n";
-        int activeUsers = 0;
-        updateStatus(users,start);
-        for(int i=0 ; i<users.size() ; i++){
-
+        while(systemTime<1000){
+            systemTime++;
         }
-        counterUsersFinished++;
+        //run cycle;
+        std::cout << "startTime: " << micros()-start << "\n";
+        updateStatus(users,activeProcesses);
+
+        for(int i=0 ; i<users.size() ; i++) {
+            for (int j = 0; j < users[i].processes.size(); j++) {
+                if (users[i].processes[j].status == ready){
+                    stop.lock();
+                    users[i].processes[j].stopFlag = false;
+                    stop.unlock();
+
+                    std::unique_lock<std::mutex> locker(mu);
+                    threadRun.unlock();
+                    if (!cond.wait_for(locker,std::chrono::microseconds(1000),[]{return r == 1;}) ){   //false == timeout
+                        stop.lock();
+                        users[i].processes[j].stopFlag = true;
+                        stop.unlock();
+                    }
+                    threadRun.lock();
+                }
+            }
+        }
+        //counterUsersFinished++;
     }
 
     return 0;
 }
 
-void runThread(User &user){
+void runThread(Process* process){
+    //std::unique_lock<std::mutex> locker(mu);
+    while(process->status==ready)
+    {
+        while(true){
+            stop.lock();
+            if(process->stopFlag == true){
+                stop.unlock();
+                break;
+            }
+            stop.unlock();
+        }
+        threadRun.lock();
 
+        process->progress++;
+        systemTime++;
+
+        stop.lock();
+        if (process->stopFlag == true)
+        {
+            stop.unlock();
+        }
+        stop.unlock();
+    }
 }
 
-void updateStatus(std::vector<User>users, uint64_t startTime){
+void updateStatus(std::vector<User> &users, std::vector<std::thread> &activeProcesses){
     for(int i=0 ; i<users.size() ; i++){
-        User tempUser = users[i];
-        for(int j=0 ; j<tempUser.processes.size() ; j++){
-            Process tempProcess = tempUser.processes[j];
-            if (tempProcess.status == notReady){
-                if (micros() - startTime > tempProcess.startTime){
-                    tempProcess.status = unfinished;
+        for(int j=0 ; j<users[i].processes.size() ; j++){
+            if (users[i].processes[j].status != ready){
+                if (systemTime > users[i].processes[j].startTime){
+                    users[i].processes[j].status = ready;
+                    users[i].processes[j].stopFlag = true;
+                    activeProcesses.emplace_back(runThread,&users[i].processes[j]);
+                    std::this_thread::sleep_for (std::chrono::milliseconds(5));
                 }
             }
         }
