@@ -16,6 +16,7 @@ private:
 public:
     int processId;
     bool stopFlag = false;
+    bool startSignal = false;
     int startTime;
     int duration;
     int progress;

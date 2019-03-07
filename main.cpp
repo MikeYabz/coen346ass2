@@ -19,8 +19,7 @@ std::condition_variable cond;
 int r;
 HANDLE C;
 
-std::mutex stop;
-bool stopFlag = false;
+std::mutex stopFlagaMutex;
 std::mutex threadRun;
 
 // Get time stamp in microseconds.
@@ -113,20 +112,24 @@ int main() {
 
         for(int i=0 ; i<users.size() ; i++) {
             for (int j = 0; j < users[i].processes.size(); j++) {
+
+
                 if (users[i].processes[j].status == ready){
-                    stop.lock();
+                    stopFlagaMutex.lock();
                     users[i].processes[j].stopFlag = false;
-                    stop.unlock();
+                    stopFlagaMutex.unlock();
 
                     std::unique_lock<std::mutex> locker(mu);
                     threadRun.unlock();
                     if (!cond.wait_for(locker,std::chrono::microseconds(1000),[]{return r == 1;}) ){   //false == timeout
-                        stop.lock();
+                        stopFlagaMutex.lock();
                         users[i].processes[j].stopFlag = true;
-                        stop.unlock();
+                        stopFlagaMutex.unlock();
                     }
                     threadRun.lock();
                 }
+
+
             }
         }
         //counterUsersFinished++;
@@ -135,30 +138,77 @@ int main() {
     return 0;
 }
 
+enum States {idle,running};
+
 void runThread(Process* process){
     //std::unique_lock<std::mutex> locker(mu);
+    bool boolStopSignalReceived = false;
+    States state = idle;
+    States  pastState = idle;
+
     while(process->status==ready)
     {
+        if (pastState == idle){
+            stopFlagaMutex.lock();
+            if(process->stopFlag == false){
+                stopFlagaMutex.unlock();
+                threadRun.lock();
+                state = running;
+            }
+        }
+        else if (state == running){
+            stopFlagaMutex.lock();
+            if(process->stopFlag == false){
+                stopFlagaMutex.unlock();
+                threadRun.unlock();
+                state = idle;
+            }
+        }
+
+        if (state == running)
+        {
+            process->progress++;
+            systemTime++;
+        }
+        pastState = state;
+
+        /*
         while(true){
             stop.lock();
-            if(process->stopFlag == true){
+            if(process->stopFlag == false){
+                if (process->startSignal == true)
+                {
+                    process->startSignal = false;
+                    threadRun.lock();
+                }
                 stop.unlock();
                 break;
             }
-            stop.unlock();
+            else{
+                stop.unlock();
+                if (boolStopSignalReceived == true){
+                    threadRun.unlock();
+                }
+            }
+
         }
-        threadRun.lock();
+         */
 
-        process->progress++;
-        systemTime++;
 
+        /*
         stop.lock();
+
         if (process->stopFlag == true)
         {
-            stop.unlock();
+            boolStopSignalReceived = true;
         }
         stop.unlock();
+         */
     }
+    //if anything gets to this point, it is finished processing
+    process->status = finished;
+    threadRun.unlock();
+    cond.notify_one();
 }
 
 void updateStatus(std::vector<User> &users, std::vector<std::thread> &activeProcesses){
