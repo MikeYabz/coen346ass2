@@ -15,8 +15,8 @@ private:
     //std::mutex memberMutex;
 public:
     int processId;
-    bool stopFlag = false;
-    bool startSignal = false;
+    bool stopFlag;
+    bool startSignal;
     int startTime;
     int duration;
     int progress;
@@ -30,6 +30,7 @@ public:
         this->duration = inputDuration;
         progress = 0;
         finishedStatus = false;
+        stopFlag = true;
         status = notReady;
     }
     ~Process() {

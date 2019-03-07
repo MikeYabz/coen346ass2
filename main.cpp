@@ -65,7 +65,7 @@ int main() {
             if (DEBUG) inFile >> processTime;
             std::cout << "process:" << i << " ready time " << readyTime << std::endl;
             std::cout << "process:" << i << " process time " << processTime << std::endl;
-            Process newProcess(readyTime,processTime);
+            Process newProcess(readyTime*100,processTime*100);
             newUser.processes.push_back(newProcess);
         }
         users.push_back(newUser);
@@ -103,12 +103,31 @@ int main() {
      */
     threadRun.lock();
     while(counterUsersFinished < userCount){
+        /*
         while(systemTime<1000){
             systemTime++;
         }
+         */
         //run cycle;
         std::cout << "startTime: " << micros()-start << "\n";
         updateStatus(users,activeProcesses);
+
+
+        bool noActiveProcesses = true;
+        for(int i=0 ; i<users.size() ; i++) {
+            for (int j = 0; j < users[i].processes.size(); j++) {
+                if(users[i].processes[j].status == ready)
+                {
+                    noActiveProcesses = false;
+                }
+            }
+        }
+        if (noActiveProcesses == true){
+            systemTime++;
+            continue;
+        }
+
+
 
         for(int i=0 ; i<users.size() ; i++) {
             for (int j = 0; j < users[i].processes.size(); j++) {
@@ -121,14 +140,26 @@ int main() {
 
                     std::unique_lock<std::mutex> locker(mu);
                     threadRun.unlock();
+
+
+                    /*
+                    cond.wait(locker);
+
+                    stopFlagaMutex.lock();
+                    users[i].processes[j].stopFlag = true;
+                    stopFlagaMutex.unlock();
+                    */
+
+
+
                     if (!cond.wait_for(locker,std::chrono::microseconds(1000),[]{return r == 1;}) ){   //false == timeout
                         stopFlagaMutex.lock();
                         users[i].processes[j].stopFlag = true;
                         stopFlagaMutex.unlock();
                     }
+
                     threadRun.lock();
                 }
-
 
             }
         }
@@ -148,29 +179,41 @@ void runThread(Process* process){
 
     while(process->status==ready)
     {
+
+
+        //************************STATE CHANGE LOGIC
         if (pastState == idle){
             stopFlagaMutex.lock();
             if(process->stopFlag == false){
-                stopFlagaMutex.unlock();
                 threadRun.lock();
                 state = running;
             }
+            stopFlagaMutex.unlock();
         }
         else if (state == running){
             stopFlagaMutex.lock();
-            if(process->stopFlag == false){
-                stopFlagaMutex.unlock();
+            if(process->stopFlag == true){
                 threadRun.unlock();
                 state = idle;
             }
+            stopFlagaMutex.unlock();
         }
+        //************************END
 
+
+        //************************STATE PROCESSING LOGIC
         if (state == running)
         {
             process->progress++;
             systemTime++;
         }
         pastState = state;
+        //************************END
+
+
+
+
+
 
         /*
         while(true){
@@ -204,9 +247,12 @@ void runThread(Process* process){
         }
         stop.unlock();
          */
+        if (process->progress > process->duration){
+            process->status = finished;
+            break;
+        }
     }
     //if anything gets to this point, it is finished processing
-    process->status = finished;
     threadRun.unlock();
     cond.notify_one();
 }
