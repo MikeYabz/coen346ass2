@@ -14,18 +14,20 @@
 
 const bool DEBUG = true;
 long long systemTime = 0;
+std::mutex systemTimeMutex;
 std::mutex mu;
 std::condition_variable cond;
 int r;
 HANDLE C;
 
-std::mutex stopFlagaMutex;
+std::mutex modifyProcessMutex;
 std::mutex threadRun;
 
 // Get time stamp in microseconds.
 uint64_t micros();
 void updateStatus(std::vector<User> &users, std::vector<std::thread> &activeProcesses);
 void runThread(Process* process);
+void clockTimeout(uint32_t timeout);
 
 int main() {
 
@@ -134,31 +136,37 @@ int main() {
 
 
                 if (users[i].processes[j].status == ready){
-                    stopFlagaMutex.lock();
-                    users[i].processes[j].stopFlag = false;
-                    stopFlagaMutex.unlock();
-
-                    std::unique_lock<std::mutex> locker(mu);
-                    threadRun.unlock();
-
 
                     /*
-                    cond.wait(locker);
-
                     stopFlagaMutex.lock();
-                    users[i].processes[j].stopFlag = true;
                     stopFlagaMutex.unlock();
                     */
 
+                    modifyProcessMutex.lock();
+                    uint32_t progressDoneBefore = users[i].processes[j].progress;
+                    users[i].processes[j].stopFlag = false;
+                    modifyProcessMutex.unlock();
 
+                    std::unique_lock<std::mutex> locker(mu);
+                    std::thread processTimer(clockTimeout,300); //setting up a scheduler timeout
+                    threadRun.unlock();
+                    //the master now gives up control of threadRun and waits for either a timeout from the clock ot the process to finish itself
+                    cond.wait(locker);
 
-                    if (!cond.wait_for(locker,std::chrono::microseconds(1000),[]{return r == 1;}) ){   //false == timeout
-                        stopFlagaMutex.lock();
-                        users[i].processes[j].stopFlag = true;
-                        stopFlagaMutex.unlock();
-                    }
+                        //Signal thread to suspend itself
+                    modifyProcessMutex.lock();
+                    users[i].processes[j].stopFlag = true;
+                    uint32_t progressDoneAfter = users[i].processes[j].progress;
+                    uint32_t timeUsedByProcess =  progressDoneAfter-progressDoneBefore;
+                    modifyProcessMutex.unlock();
 
+                    processTimer.detach();
                     threadRun.lock();
+
+                    /*
+                    if (!cond.wait_for(locker,std::chrono::microseconds(1000),[]{return r == 1;}) ){   //false == timeout
+                    }
+*/
                 }
 
             }
@@ -177,26 +185,26 @@ void runThread(Process* process){
     States state = idle;
     States  pastState = idle;
 
-    while(process->status==ready)
+    while(true)
     {
 
 
         //************************STATE CHANGE LOGIC
         if (pastState == idle){
-            stopFlagaMutex.lock();
+            modifyProcessMutex.lock();
             if(process->stopFlag == false){
                 threadRun.lock();
                 state = running;
             }
-            stopFlagaMutex.unlock();
+            modifyProcessMutex.unlock();
         }
         else if (state == running){
-            stopFlagaMutex.lock();
+            modifyProcessMutex.lock();
             if(process->stopFlag == true){
                 threadRun.unlock();
                 state = idle;
             }
-            stopFlagaMutex.unlock();
+            modifyProcessMutex.unlock();
         }
         //************************END
 
@@ -205,7 +213,9 @@ void runThread(Process* process){
         if (state == running)
         {
             process->progress++;
+            systemTimeMutex.lock();
             systemTime++;
+            systemTimeMutex.unlock();
         }
         pastState = state;
         //************************END
@@ -260,7 +270,7 @@ void runThread(Process* process){
 void updateStatus(std::vector<User> &users, std::vector<std::thread> &activeProcesses){
     for(int i=0 ; i<users.size() ; i++){
         for(int j=0 ; j<users[i].processes.size() ; j++){
-            if (users[i].processes[j].status != ready){
+            if (users[i].processes[j].status == notReady){
                 if (systemTime > users[i].processes[j].startTime){
                     users[i].processes[j].status = ready;
                     users[i].processes[j].stopFlag = true;
@@ -278,4 +288,18 @@ uint64_t micros()
     uint64_t us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::
                                                                         now().time_since_epoch()).count();
     return us;
+}
+
+void clockTimeout(uint32_t timeout){
+    uint32_t currentTime = systemTime;
+    while(true){
+        systemTimeMutex.lock();
+        if(systemTime > currentTime+timeout){
+            systemTimeMutex.unlock();
+            cond.notify_one();
+            return;
+        }
+        systemTimeMutex.unlock();
+    }
+    return;
 }
