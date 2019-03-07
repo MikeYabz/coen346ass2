@@ -13,7 +13,8 @@
 
 
 const bool DEBUG = true;
-long long systemTime = 0;
+long long systemTime = 900;
+bool processTimeStopFlag = false;
 std::mutex systemTimeMutex;
 std::mutex mu;
 std::condition_variable cond;
@@ -22,12 +23,14 @@ HANDLE C;
 
 std::mutex modifyProcessMutex;
 std::mutex threadRun;
+std::mutex timeoutEndFlagMutex;
 
 // Get time stamp in microseconds.
 uint64_t micros();
 void updateStatus(std::vector<User> &users, std::vector<std::thread> &activeProcesses);
 void runThread(Process* process);
 void clockTimeout(uint32_t timeout);
+//void clockTimeout(uint32_t timeout, bool &timeoutEndFlag);
 
 int main() {
 
@@ -67,7 +70,7 @@ int main() {
             if (DEBUG) inFile >> processTime;
             std::cout << "process:" << i << " ready time " << readyTime << std::endl;
             std::cout << "process:" << i << " process time " << processTime << std::endl;
-            Process newProcess(readyTime*100,processTime*100);
+            Process newProcess(readyTime*1000,processTime*1000);
             newUser.processes.push_back(newProcess);
         }
         users.push_back(newUser);
@@ -85,8 +88,10 @@ int main() {
         std::cout << "-------------------------------------\n";
     }
 
-    const uint16_t userCount = 1000;// users.size();
-    uint16_t counterUsersFinished = 0;
+    /*
+    const uint16_t processesCount = users.size();// users.size();
+    uint16_t counterProcessesFinished = 0;
+    */
 
     uint64_t start = micros();
     auto quantumMicro = quantum*1000000; //convert quantum in second to milliseconds
@@ -104,14 +109,14 @@ int main() {
     }
      */
     threadRun.lock();
-    while(counterUsersFinished < userCount){
+    while(true){
         /*
         while(systemTime<1000){
             systemTime++;
         }
          */
         //run cycle;
-        std::cout << "startTime: " << micros()-start << "\n";
+        std::cout << "startTime: " << systemTime << "\n";
         updateStatus(users,activeProcesses);
 
 
@@ -137,18 +142,20 @@ int main() {
 
                 if (users[i].processes[j].status == ready){
 
-                    /*
-                    stopFlagaMutex.lock();
-                    stopFlagaMutex.unlock();
-                    */
-
                     modifyProcessMutex.lock();
                     uint32_t progressDoneBefore = users[i].processes[j].progress;
                     users[i].processes[j].stopFlag = false;
                     modifyProcessMutex.unlock();
 
                     std::unique_lock<std::mutex> locker(mu);
-                    std::thread processTimer(clockTimeout,300); //setting up a scheduler timeout
+
+
+                    systemTimeMutex.lock();
+                    processTimeStopFlag = false;
+                    systemTimeMutex.unlock();
+                    std::thread processTimer(clockTimeout,1000); //setting up a scheduler timeout
+
+
                     threadRun.unlock();
                     //the master now gives up control of threadRun and waits for either a timeout from the clock ot the process to finish itself
                     cond.wait(locker);
@@ -160,20 +167,41 @@ int main() {
                     uint32_t timeUsedByProcess =  progressDoneAfter-progressDoneBefore;
                     modifyProcessMutex.unlock();
 
-                    processTimer.detach();
                     threadRun.lock();
 
-                    /*
-                    if (!cond.wait_for(locker,std::chrono::microseconds(1000),[]{return r == 1;}) ){   //false == timeout
-                    }
-*/
-                }
+                    systemTimeMutex.lock();
+                    processTimeStopFlag = true;
+                    systemTimeMutex.unlock();
+                    processTimer.join();
 
+                }
             }
         }
-        //counterUsersFinished++;
+
+
+        int counterUsersNotFinished= 0;
+        for(int i=0 ; i<users.size() ; i++) {
+            for (int j = 0; j < users[i].processes.size(); j++) {
+                if(users[i].processes[j].status != finished){
+                    counterUsersNotFinished++;
+                }
+            }
+        }
+        if (counterUsersNotFinished == 0)
+        {
+            break;
+        }
+
+
+
     }
 
+    for(int i=0;i<activeProcesses.size();i++){
+        activeProcesses[i].join();
+    }
+
+    std::string temp;
+    std::cin >> temp;
     return 0;
 }
 
@@ -198,7 +226,7 @@ void runThread(Process* process){
             }
             modifyProcessMutex.unlock();
         }
-        else if (state == running){
+        else if (pastState == running){
             modifyProcessMutex.lock();
             if(process->stopFlag == true){
                 threadRun.unlock();
@@ -221,43 +249,7 @@ void runThread(Process* process){
         //************************END
 
 
-
-
-
-
-        /*
-        while(true){
-            stop.lock();
-            if(process->stopFlag == false){
-                if (process->startSignal == true)
-                {
-                    process->startSignal = false;
-                    threadRun.lock();
-                }
-                stop.unlock();
-                break;
-            }
-            else{
-                stop.unlock();
-                if (boolStopSignalReceived == true){
-                    threadRun.unlock();
-                }
-            }
-
-        }
-         */
-
-
-        /*
-        stop.lock();
-
-        if (process->stopFlag == true)
-        {
-            boolStopSignalReceived = true;
-        }
-        stop.unlock();
-         */
-        if (process->progress > process->duration){
+        if (process->progress >= process->duration){
             process->status = finished;
             break;
         }
@@ -271,7 +263,7 @@ void updateStatus(std::vector<User> &users, std::vector<std::thread> &activeProc
     for(int i=0 ; i<users.size() ; i++){
         for(int j=0 ; j<users[i].processes.size() ; j++){
             if (users[i].processes[j].status == notReady){
-                if (systemTime > users[i].processes[j].startTime){
+                if (systemTime >= users[i].processes[j].startTime){
                     users[i].processes[j].status = ready;
                     users[i].processes[j].stopFlag = true;
                     activeProcesses.emplace_back(runThread,&users[i].processes[j]);
@@ -293,13 +285,25 @@ uint64_t micros()
 void clockTimeout(uint32_t timeout){
     uint32_t currentTime = systemTime;
     while(true){
+
+
         systemTimeMutex.lock();
-        if(systemTime > currentTime+timeout){
+        if((systemTime > currentTime+timeout) || (processTimeStopFlag == true)){
             systemTimeMutex.unlock();
             cond.notify_one();
             return;
         }
         systemTimeMutex.unlock();
+
+
+        /*
+        timeoutEndFlagMutex.lock();
+        if (timeoutEndFlag == false){
+            timeoutEndFlagMutex.unlock();
+            return;
+        }
+        timeoutEndFlagMutex.unlock();
+        */
+
     }
-    return;
 }
