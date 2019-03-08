@@ -39,19 +39,19 @@ cmake_force:
 SHELL = /bin/sh
 
 # The CMake executable.
-CMAKE_COMMAND = /cygdrive/c/Users/mike.y/.CLion2018.3/system/cygwin_cmake/bin/cmake.exe
+CMAKE_COMMAND = /cygdrive/c/Users/micya/.CLion2018.3/system/cygwin_cmake/bin/cmake.exe
 
 # The command to remove a file.
-RM = /cygdrive/c/Users/mike.y/.CLion2018.3/system/cygwin_cmake/bin/cmake.exe -E remove -f
+RM = /cygdrive/c/Users/micya/.CLion2018.3/system/cygwin_cmake/bin/cmake.exe -E remove -f
 
 # Escaping for special characters.
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /cygdrive/c/Users/mike.y/Documents/coen346ass2
+CMAKE_SOURCE_DIR = /cygdrive/c/Users/micya/Documents/coen346ass2
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /cygdrive/c/Users/mike.y/Documents/coen346ass2/cmake-build-debug
+CMAKE_BINARY_DIR = /cygdrive/c/Users/micya/Documents/coen346ass2/cmake-build-debug
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -59,7 +59,7 @@ CMAKE_BINARY_DIR = /cygdrive/c/Users/mike.y/Documents/coen346ass2/cmake-build-de
 # Special rule for the target rebuild_cache
 rebuild_cache:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake to regenerate build system..."
-	/cygdrive/c/Users/mike.y/.CLion2018.3/system/cygwin_cmake/bin/cmake.exe -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
+	/cygdrive/c/Users/micya/.CLion2018.3/system/cygwin_cmake/bin/cmake.exe -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
 .PHONY : rebuild_cache
 
 # Special rule for the target rebuild_cache
@@ -70,7 +70,7 @@ rebuild_cache/fast: rebuild_cache
 # Special rule for the target edit_cache
 edit_cache:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "No interactive CMake dialog available..."
-	/cygdrive/c/Users/mike.y/.CLion2018.3/system/cygwin_cmake/bin/cmake.exe -E echo No\ interactive\ CMake\ dialog\ available.
+	/cygdrive/c/Users/micya/.CLion2018.3/system/cygwin_cmake/bin/cmake.exe -E echo No\ interactive\ CMake\ dialog\ available.
 .PHONY : edit_cache
 
 # Special rule for the target edit_cache
@@ -80,9 +80,9 @@ edit_cache/fast: edit_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /cygdrive/c/Users/mike.y/Documents/coen346ass2/cmake-build-debug/CMakeFiles /cygdrive/c/Users/mike.y/Documents/coen346ass2/cmake-build-debug/CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /cygdrive/c/Users/micya/Documents/coen346ass2/cmake-build-debug/CMakeFiles /cygdrive/c/Users/micya/Documents/coen346ass2/cmake-build-debug/CMakeFiles/progress.marks
 	$(MAKE) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /cygdrive/c/Users/mike.y/Documents/coen346ass2/cmake-build-debug/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /cygdrive/c/Users/micya/Documents/coen346ass2/cmake-build-debug/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -123,60 +123,6 @@ untitled1/fast:
 	$(MAKE) -f CMakeFiles/untitled1.dir/build.make CMakeFiles/untitled1.dir/build
 .PHONY : untitled1/fast
 
-Process.o: Process.cpp.o
-
-.PHONY : Process.o
-
-# target to build an object file
-Process.cpp.o:
-	$(MAKE) -f CMakeFiles/untitled1.dir/build.make CMakeFiles/untitled1.dir/Process.cpp.o
-.PHONY : Process.cpp.o
-
-Process.i: Process.cpp.i
-
-.PHONY : Process.i
-
-# target to preprocess a source file
-Process.cpp.i:
-	$(MAKE) -f CMakeFiles/untitled1.dir/build.make CMakeFiles/untitled1.dir/Process.cpp.i
-.PHONY : Process.cpp.i
-
-Process.s: Process.cpp.s
-
-.PHONY : Process.s
-
-# target to generate assembly for a file
-Process.cpp.s:
-	$(MAKE) -f CMakeFiles/untitled1.dir/build.make CMakeFiles/untitled1.dir/Process.cpp.s
-.PHONY : Process.cpp.s
-
-User.o: User.cpp.o
-
-.PHONY : User.o
-
-# target to build an object file
-User.cpp.o:
-	$(MAKE) -f CMakeFiles/untitled1.dir/build.make CMakeFiles/untitled1.dir/User.cpp.o
-.PHONY : User.cpp.o
-
-User.i: User.cpp.i
-
-.PHONY : User.i
-
-# target to preprocess a source file
-User.cpp.i:
-	$(MAKE) -f CMakeFiles/untitled1.dir/build.make CMakeFiles/untitled1.dir/User.cpp.i
-.PHONY : User.cpp.i
-
-User.s: User.cpp.s
-
-.PHONY : User.s
-
-# target to generate assembly for a file
-User.cpp.s:
-	$(MAKE) -f CMakeFiles/untitled1.dir/build.make CMakeFiles/untitled1.dir/User.cpp.s
-.PHONY : User.cpp.s
-
 main.o: main.cpp.o
 
 .PHONY : main.o
@@ -213,12 +159,6 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... untitled1"
 	@echo "... edit_cache"
-	@echo "... Process.o"
-	@echo "... Process.i"
-	@echo "... Process.s"
-	@echo "... User.o"
-	@echo "... User.i"
-	@echo "... User.s"
 	@echo "... main.o"
 	@echo "... main.i"
 	@echo "... main.s"
