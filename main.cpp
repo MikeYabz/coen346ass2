@@ -3,16 +3,13 @@
 #include <vector>
 #include <string.h>
 #include <fstream>
-#include <cstring>
 #include "User.h"
-#include <chrono>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
-#include <w32api/processthreadsapi.h>
 
 
-    //Enables debug mode with termninal outputs
+    //Enables debug mode with terminal outputs
 const bool DEBUG = true;
 
     //System Clock
@@ -30,6 +27,8 @@ std::mutex modifyProcessMutex;
     //mutex for whichever thread has control of the CPU
 std::mutex threadRun;
 
+    //Create Output Text File
+std::ofstream output;
 
 void updateStatus(std::vector<User> &users, std::vector<std::thread> &activeProcesses);
 void runThread(Process* process);
@@ -87,26 +86,16 @@ int main() {
     //****************************************End of Parsing**************************************************
     //********************************************************************************************************
 
-    /*
-    std::cout << "\n\n\nRead Back From Object Vector\n-------------------------------------\n";
-    for(int i=0;i<users.size();i++){
-        if (DEBUG) std::cout << "username: " << users[i].username <<std::endl;
-        if (DEBUG) std::cout << "number of processes: " << users[i].processes.size() << "\n\n";
-        for(int j=0;j<users[i].processes.size();j++) {
-            //Process tempProcess = users[i].processes[j];
-            std::cout << "process:" << j << " ready time " << users[i].processes[j].startTime << std::endl;
-            std::cout << "process:" << j << " process time " << users[i].processes[j].duration << std::endl;
-        }
-        std::cout << "-------------------------------------\n";
-    }*/
 
+    output.open ("output.txt");
 
+        //Start and Run Scheduler
     uint32_t  quantumThousand = quantum*1000; //convert quantum in seconds to milliseconds, makes splitting the quantum for fairsharing easier
     std::vector<std::thread> activeProcesses;   //create array which will hold all the process threads
     threadRun.lock();   //scheduler takes control of the CPU
     while(true){
-
-        std::cout << "startTime: " << systemTime << "\n";
+        //if (DEBUG) std::cout << "System Time " << systemTime << "\n";
+        if (DEBUG) std::cout << "------------------------------------------------------------------ CPU Clock: " << systemTime << "\n";
 
             //Check if new processes are ready for processing
         updateStatus(users,activeProcesses);    //check if new processes are ready
@@ -142,6 +131,14 @@ int main() {
 
                         //release threadRun lock which now allows the thread to finally begin processing
                     threadRun.unlock();
+                    /*
+                    if (users[i].processes[j].progress == 0){
+                        output << "Time " << systemTime/1000 << ", User " << users[i].username << ", Process " << j << ", Started" << "\r\n";
+                    }
+                     */
+                    output << "Time " << systemTime/1000 << ", User " << users[i].username << ", Process " << j << ", Resumed" << "\r\n";
+                    if (DEBUG) std::cout << "Time " << systemTime << ", User " << users[i].username << ", Process " << j << ", Resumed, " << " Progress: " << users[i].processes[j].progress << "/" << users[i].processes[j].duration << " Quantum Given: " << ((double)allotedTime) << "\n";
+
                     //the master now gives up control of threadRun and waits for either a timeout from the clock ot the process to finish itself
                     std::unique_lock<std::mutex> schedulerSleep(schedulerSleepMutex);
                     cond.wait(schedulerSleep);
@@ -152,6 +149,15 @@ int main() {
                     uint32_t progressDoneAfter = users[i].processes[j].progress;
                     uint32_t timeUsedByProcess =  progressDoneAfter-progressDoneBefore;
                     modifyProcessMutex.unlock();
+
+                    output << "Time " << systemTime/1000 << ", User " << users[i].username << ", Process " << j << ", Paused" << "\r\n";
+                    if (DEBUG) std::cout << "Time " << systemTime << ", User " << users[i].username << ", Process " << j << ", Paused, " << " Progress: " << users[i].processes[j].progress << "/" << users[i].processes[j].duration << "\n";
+                    if (users[i].processes[j].status == finished){
+                        output << "Time " << systemTime/1000 << ", User " << users[i].username << ", Process " << j << ", Finished" << "\r\n";
+                        if (DEBUG) std::cout << "Time " << systemTime << ", User " << users[i].username << ", Process " << j << ", Finished" << "\n";
+
+                    }
+                    if (DEBUG) std::cout <<"\n";
 
                         //Take back control of threadRun
                     threadRun.lock();
@@ -191,6 +197,7 @@ int main() {
         std::string temp;   //pause terminal for debugging
         std::cin >> temp;   //pause terminal for debugging
     }
+    output.close();
     return 0;
 }
 
@@ -264,8 +271,10 @@ void updateStatus(std::vector<User> &users, std::vector<std::thread> &activeProc
                 if (systemTime >= users[i].processes[j].startTime){
                     users[i].processes[j].status = ready;
                     users[i].processes[j].stopFlag = true;
+                    users[i].processes[j].progress = 0;
                     activeProcesses.emplace_back(runThread,&users[i].processes[j]);
-                    std::this_thread::sleep_for (std::chrono::milliseconds(5));
+                    output << "Time " << systemTime/1000 << ", User " << users[i].username << ", Process " << j << ", Started" << "\r\n";
+                    if (DEBUG) std::cout << "Time " << systemTime << ", User " << users[i].username << ", Process " << j << ", Started" << "\r\n";
                 }
             }
         }

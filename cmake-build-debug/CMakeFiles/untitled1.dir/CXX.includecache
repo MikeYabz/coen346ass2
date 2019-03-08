@@ -29,18 +29,12 @@ string.h
 -
 fstream
 -
-cstring
--
 User.h
 /cygdrive/c/Users/micya/Documents/coen346ass2/User.h
-chrono
--
 thread
 -
 mutex
 -
 condition_variable
--
-w32api/processthreadsapi.h
 -
 
